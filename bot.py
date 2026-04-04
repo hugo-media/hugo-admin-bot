@@ -76,7 +76,7 @@ CATEGORIES = {
 
 SUBCATEGORIES = ["new", "refurbished", "business", "promotions"]
 CONDITIONS = ["Новий", "Б/у відмінний", "Б/у хороший", "Б/у задовільний"]
-WARRANTIES = ["Без гарантії", "1 місяць", "3 місяці", "6 місяців", "1 рік", "2 роки"]
+WARRANTIES = ["Без гарантії", "1 місяць", "3 місяці", "6 місяців", "1 рік", "2 роки", "3 роки", "5 років"]
 
 
 # ─── HELPERS ───────────────────────────────────────────────────────────────────
@@ -184,9 +184,9 @@ async def publish_to_channel(bot, data: dict, photo_file_id: str | None = None) 
     if discount > 0:
         original = int(price)
         discounted = int(original * (1 - discount / 100))
-        lines.append(f"💰 Ціна: ~{original} грн~ → *{discounted} грн* (-{discount}%)")
+        lines.append(f"💰 Ціна: ~{original} zł~ → *{discounted} zł* (-{discount}%)")
     else:
-        lines.append(f"💰 Ціна: *{price} грн*")
+        lines.append(f"💰 Ціна: *{price} zł*")
 
     if desc:
         lines.append("")
@@ -246,7 +246,7 @@ def format_summary(data: dict) -> str:
         "camera": "Камера",
         "condition": "Стан",
         "warranty": "Гарантія",
-        "price": "Ціна (грн)",
+        "price": "Ціна (zł)",
         "discountPercent": "Знижка %",
         "categories": "Підкатегорія",
         "description": "Опис",
@@ -578,14 +578,14 @@ async def enter_warranty(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     context.user_data["warranty"] = query.data.replace("warr_", "")
-    await query.edit_message_text("Ціна в ГРИВНЯХ (грн) (тільки цифри, наприклад: 25000):")
+    await query.edit_message_text("Ціна в ЗЛОТИХ (zł) (тільки цифри, наприклад: 1500):")
     return ENTER_PRICE
 
 
 async def enter_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip().replace(" ", "").replace(",", "")
     if not text.isdigit():
-        await update.message.reply_text("Введи тільки цифри в ГРИВНЯХ (грн)! Наприклад: 25000")
+        await update.message.reply_text("Введи тільки цифри в ЗЛОТИХ (zł)! Наприклад: 1500")
         return ENTER_PRICE
     context.user_data["price"] = int(text)
     await update.message.reply_text(
