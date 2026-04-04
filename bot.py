@@ -115,13 +115,16 @@ async def upload_photo_to_site(photo_bytes: bytes, filename: str) -> str | None:
 async def send_to_site(data: dict) -> bool:
     """Send product data to site API."""
     try:
+        # Ensure imageUrl is always a string (site requires string, not null)
+        payload = dict(data)
+        payload["imageUrl"] = data.get("imageUrl") or ""
         resp = requests.post(
             f"{SITE_URL}/api/bot/product",
             headers={
                 "x-bot-secret": BOT_API_SECRET,
                 "Content-Type": "application/json"
             },
-            json=data,
+            json=payload,
             timeout=30
         )
         logger.info(f"Site API response: {resp.status_code} {resp.text[:300]}")
