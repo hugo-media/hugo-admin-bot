@@ -105,18 +105,10 @@ def cancel_kb() -> InlineKeyboardMarkup:
 
 async def upload_photo_to_site(photo_bytes: bytes, filename: str) -> str | None:
     """Upload photo to site and return URL."""
-    try:
-        resp = requests.post(
-            f"{SITE_URL}/api/bot/upload",
-            headers={"x-bot-secret": BOT_API_SECRET},
-            files={"file": (filename, photo_bytes, "image/jpeg")},
-            timeout=30
-        )
-        logger.info(f"Photo upload response: {resp.status_code} {resp.text[:200]}")
-        if resp.status_code == 200:
-            return resp.json().get("url")
-    except Exception as e:
-        logger.error(f"Photo upload failed: {e}")
+    # NOTE: Site doesn't have /api/bot/upload endpoint yet
+    # Photos are stored in TG file_id and published to channel
+    # This function returns None - imageUrl will be set from Telegram
+    logger.info(f"Photo upload skipped - will use TG file_id for channel post")
     return None
 
 
@@ -189,9 +181,9 @@ async def publish_to_channel(bot, data: dict, photo_file_id: str | None = None) 
     if discount > 0:
         original = int(price)
         discounted = int(original * (1 - discount / 100))
-        lines.append(f"💰 Ціна: ~{original} грн~ → *{discounted} грн* (-{discount}%)")
+        lines.append(f"💰 Ціна: ~{original} zł~ → *{discounted} zł* (-{discount}%)")
     else:
-        lines.append(f"💰 Ціна: *{price} грн*")
+        lines.append(f"💰 Ціна: *{price} zł*")
 
     if desc:
         lines.append("")
@@ -251,7 +243,7 @@ def format_summary(data: dict) -> str:
         "camera": "Камера",
         "condition": "Стан",
         "warranty": "Гарантія",
-        "price": "Ціна (грн)",
+        "price": "Ціна (zł)",
         "discountPercent": "Знижка %",
         "categories": "Підкатегорія",
         "description": "Опис",
@@ -590,7 +582,7 @@ async def enter_warranty(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def enter_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip().replace(" ", "").replace(",", "")
     if not text.isdigit():
-        await update.message.reply_text("Введи тільки цифри! Наприклад: 14700")
+        await update.message.reply_text("Введи тільки цифри в ЗЛОТИХ (zł)! Наприклад: 2999")
         return ENTER_PRICE
     context.user_data["price"] = int(text)
     await update.message.reply_text(
