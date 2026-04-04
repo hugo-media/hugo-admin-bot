@@ -667,13 +667,12 @@ async def enter_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
     summary = format_summary(context.user_data)
 
     publish_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🌐 Тільки сайт", callback_data="pub_site")],
-        [InlineKeyboardButton("📢 Тільки TG канал", callback_data="pub_tg")],
-        [InlineKeyboardButton("✅ Сайт + TG канал", callback_data="pub_both")],
+        [InlineKeyboardButton("🌐 Публікувати на сайт", callback_data="pub_site")],
+        [InlineKeyboardButton("📢 Публікувати в TG", callback_data="pub_tg")],
         [InlineKeyboardButton("❌ Скасувати", callback_data="pub_cancel")],
     ])
 
-    msg = summary + "\n\n📤 *Куди публікувати?*"
+    msg = summary + "\n\n📤 *Вибери дію:*"
 
     if update.callback_query:
         await update.callback_query.edit_message_text(msg, reply_markup=publish_kb, parse_mode="Markdown")
@@ -694,9 +693,8 @@ async def choose_publish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["publish_dest"] = dest
 
     dest_text = {
-        "site": "🌐 Тільки сайт",
-        "tg": "📢 Тільки TG канал",
-        "both": "✅ Сайт + TG канал",
+        "site": "🌐 Публікувати на сайт",
+        "tg": "📢 Публікувати в TG",
     }.get(dest, dest)
 
     confirm_kb = InlineKeyboardMarkup([
