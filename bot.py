@@ -629,27 +629,20 @@ async def enter_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.photo:
         photo = update.message.photo[-1]  # highest resolution
         context.user_data["photoFileId"] = photo.file_id
-
-        # Try to upload to site
+        # Get Telegram file URL for the site
         try:
             file = await photo.get_file()
-            photo_bytes = await file.download_as_bytearray()
-            url = await upload_photo_to_site(bytes(photo_bytes), f"product_{photo.file_id}.jpg")
-            if url:
-                context.user_data["imageUrl"] = url
-                await update.message.reply_text(
-                    "✅ Фото отримано!\n\n📝 Опис товару (або натисни Пропустити):",
-                    reply_markup=skip_kb()
-                )
-            else:
-                context.user_data["imageUrl"] = None
-                await update.message.reply_text(
-                    "✅ Фото збережено (буде в TG каналі).\n\n📝 Опис товару (або натисни Пропустити):",
-                    reply_markup=skip_kb()
-                )
+            # Use Telegram's CDN URL directly as imageUrl
+            tg_url = file.file_path
+            context.user_data["imageUrl"] = tg_url or ""
+            logger.info(f"Photo URL: {tg_url}")
+            await update.message.reply_text(
+                "✅ Фото отримано!\n\n📝 Опис товару (або натисни Пропустити):",
+                reply_markup=skip_kb()
+            )
         except Exception as e:
             logger.error(f"Photo processing error: {e}")
-            context.user_data["imageUrl"] = None
+            context.user_data["imageUrl"] = ""
             await update.message.reply_text(
                 "✅ Фото збережено.\n\n📝 Опис товару (або натисни Пропустити):",
                 reply_markup=skip_kb()
