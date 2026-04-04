@@ -656,7 +656,7 @@ async def enter_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def enter_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query:
         await update.callback_query.answer()
-        context.user_data["description"] = None
+        context.user_data["description"] = ""
     else:
         context.user_data["description"] = update.message.text.strip()
 
