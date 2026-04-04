@@ -181,9 +181,9 @@ async def publish_to_channel(bot, data: dict, photo_file_id: str | None = None) 
     if discount > 0:
         original = int(price)
         discounted = int(original * (1 - discount / 100))
-        lines.append(f"💰 Ціна: ~{original} zł~ → *{discounted} zł* (-{discount}%)")
+        lines.append(f"💰 Ціна: ~{original} грн~ → *{discounted} грн* (-{discount}%)")
     else:
-        lines.append(f"💰 Ціна: *{price} zł*")
+        lines.append(f"💰 Ціна: *{price} грн*")
 
     if desc:
         lines.append("")
@@ -243,7 +243,7 @@ def format_summary(data: dict) -> str:
         "camera": "Камера",
         "condition": "Стан",
         "warranty": "Гарантія",
-        "price": "Ціна (zł)",
+        "price": "Ціна (грн)",
         "discountPercent": "Знижка %",
         "categories": "Підкатегорія",
         "description": "Опис",
@@ -575,14 +575,14 @@ async def enter_warranty(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     context.user_data["warranty"] = query.data.replace("warr_", "")
-    await query.edit_message_text("Ціна в ZŁOTY (zł) (тільки цифри, наприклад: 2999):")
+    await query.edit_message_text("Ціна в ГРИВНЯХ (грн) (тільки цифри, наприклад: 25000):")
     return ENTER_PRICE
 
 
 async def enter_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip().replace(" ", "").replace(",", "")
     if not text.isdigit():
-        await update.message.reply_text("Введи тільки цифри в ЗЛОТИХ (zł)! Наприклад: 2999")
+        await update.message.reply_text("Введи тільки цифри в ГРИВНЯХ (грн)! Наприклад: 25000")
         return ENTER_PRICE
     context.user_data["price"] = int(text)
     await update.message.reply_text(
@@ -667,8 +667,9 @@ async def enter_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
     summary = format_summary(context.user_data)
 
     publish_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🌐 Публікувати на сайт", callback_data="pub_site")],
-        [InlineKeyboardButton("📢 Публікувати в TG", callback_data="pub_tg")],
+        [InlineKeyboardButton("🌐+📢 Сайт і TG", callback_data="pub_both")],
+        [InlineKeyboardButton("🌐 Тільки сайт", callback_data="pub_site")],
+        [InlineKeyboardButton("📢 Тільки TG", callback_data="pub_tg")],
         [InlineKeyboardButton("❌ Скасувати", callback_data="pub_cancel")],
     ])
 
@@ -693,8 +694,9 @@ async def choose_publish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["publish_dest"] = dest
 
     dest_text = {
-        "site": "🌐 Публікувати на сайт",
-        "tg": "📢 Публікувати в TG",
+        "both": "🌐+📢 Сайт і Telegram",
+        "site": "🌐 Тільки сайт",
+        "tg": "📢 Тільки Telegram",
     }.get(dest, dest)
 
     confirm_kb = InlineKeyboardMarkup([
