@@ -575,7 +575,7 @@ async def enter_warranty(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     context.user_data["warranty"] = query.data.replace("warr_", "")
-    await query.edit_message_text("Ціна в гривнях (тільки цифри, наприклад: 14700):")
+    await query.edit_message_text("Ціна в ZŁOTY (zł) (тільки цифри, наприклад: 2999):")
     return ENTER_PRICE
 
 
