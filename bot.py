@@ -8,6 +8,8 @@ import os
 import json
 import logging
 import requests
+import io
+import uuid
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, CallbackQueryHandler,
@@ -26,6 +28,43 @@ OWNER_ID = int(os.getenv("OWNER_ID", "0"))
 SITE_URL = os.getenv("SITE_URL", "https://laptopcat-dmlwym6z.manus.space")
 BOT_API_SECRET = os.getenv("BOT_API_SECRET", "hugo_bot_secret_2024")
 TG_CHANNEL = os.getenv("TG_CHANNEL", "@hugo_media_shop")
+
+# ─── S3 UPLOAD HELPER ──────────────────────────────────────────────────────────
+async def upload_photo_to_s3(photo_file_path: str, bot) -> str:
+    """
+    Download photo from Telegram and upload to S3 via website API
+    Returns the public URL
+    """
+    try:
+        # Download file from Telegram
+        file = await bot.get_file(photo_file_path)
+        photo_bytes = await file.download_as_bytearray()
+        
+        # Generate unique filename
+        filename = f"product_{uuid.uuid4().hex[:8]}.jpg"
+        
+        # Upload to S3 via website API
+        files = {'file': (filename, io.BytesIO(photo_bytes), 'image/jpeg')}
+        headers = {'X-Bot-Secret': BOT_API_SECRET}
+        
+        response = requests.post(
+            f"{SITE_URL}/api/bot/upload",
+            files=files,
+            headers=headers,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            image_url = data.get('url', '')
+            logger.info(f"✅ Фото завантажено на S3: {image_url}")
+            return image_url
+        else:
+            logger.error(f"❌ Помилка завантаження: {response.text}")
+            return ""
+    except Exception as e:
+        logger.error(f"❌ Помилка S3 upload: {e}")
+        return ""
 
 # ─── STATES ────────────────────────────────────────────────────────────────────
 (
@@ -304,15 +343,43 @@ async def enter_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         await update.callback_query.answer()
         context.user_data["imageUrl"] = ""
     elif update.message.photo:
-        file = await update.message.photo[-1].get_file()
-        context.user_data["imageUrl"] = file.file_path
+        # Show loading message
+        loading_msg = await update.message.reply_text("⏳ Завантажую фото на S3...")
+        
+        try:
+            file = await update.message.photo[-1].get_file()
+            # Upload photo to S3
+            image_url = await upload_photo_to_s3(file.file_path, context.bot)
+            
+            if image_url:
+                context.user_data["imageUrl"] = image_url
+                await loading_msg.delete()
+                await update.message.reply_text(
+                    "✅ Фото завантажено!\n📝 Опис товару (або натисніть Пропустити):",
+                    reply_markup=skip_kb()
+                )
+            else:
+                context.user_data["imageUrl"] = ""
+                await loading_msg.delete()
+                await update.message.reply_text(
+                    "❌ Помилка завантаження фото. Спробуйте ще раз.\n📝 Опис товару (або натисніть Пропустити):",
+                    reply_markup=skip_kb()
+                )
+        except Exception as e:
+            logger.error(f"❌ Помилка при завантаженні фото: {e}")
+            context.user_data["imageUrl"] = ""
+            await loading_msg.delete()
+            await update.message.reply_text(
+                "❌ Помилка при завантаженні фото.\n📝 Опис товару (або натисніть Пропустити):",
+                reply_markup=skip_kb()
+            )
     else:
         context.user_data["imageUrl"] = ""
+        await update.message.reply_text(
+            "📝 Опис товару (або натисніть Пропустити):",
+            reply_markup=skip_kb()
+        )
     
-    await update.message.reply_text(
-        "📝 Опис товару (або натисніть Пропустити):",
-        reply_markup=skip_kb()
-    )
     return ENTER_DESCRIPTION
 
 # ─── DESCRIPTION ──────────────────────────────────────────────────────────────
