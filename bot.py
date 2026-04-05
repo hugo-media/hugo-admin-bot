@@ -85,6 +85,7 @@ async def upload_photo_to_s3(file, bot) -> str:
     CHOOSE_CATEGORY,
     ENTER_NAME,
     ENTER_PRICE,
+    ENTER_DISCOUNT,
     ENTER_PHOTO,
     ENTER_DESCRIPTION,
     # Laptop filters
@@ -107,21 +108,22 @@ async def upload_photo_to_s3(file, bot) -> str:
     # Publish
     CHOOSE_PUBLISH,
     CONFIRM,
-) = range(19)
+) = range(20)
 
 # ─── FILTER OPTIONS (from website) ────────────────────────────────────────────
 LAPTOP_FILTERS = {
-    "display": ["13\"", "14\"", "15\"", "16\"", "17\"", "18\""],
-    "ram": ["8 GB", "16 GB", "32 GB", "64 GB"],
-    "processor": ["Intel Core i5", "Intel Core i7", "Intel Core i9", "Intel Core Ultra", "AMD Ryzen 5", "AMD Ryzen 7", "AMD Ryzen 9"],
-    "brand": ["Dell", "HP", "Lenovo", "ASUS", "Acer", "MSI", "Alienware", "Apple"],
+    "display": ["11\"", "12\"", "13\"", "14\"", "15\"", "16\"", "17\"", "18\""],
+    "ram": ["4 GB", "8 GB", "16 GB", "32 GB", "64 GB", "128 GB"],
+    "processor": ["Intel Core i3", "Intel Core i5", "Intel Core i7", "Intel Core i9", "Intel Core Ultra 5", "Intel Core Ultra 7", "Intel Core Ultra 9", "AMD Ryzen 3", "AMD Ryzen 5", "AMD Ryzen 7", "AMD Ryzen 9"],
+    "graphics": ["Intel UHD", "Intel Iris Xe", "NVIDIA GTX 1650", "NVIDIA RTX 4050", "NVIDIA RTX 4060", "NVIDIA RTX 4070", "NVIDIA RTX 4090", "AMD Radeon"],
+    "brand": ["Dell", "HP", "Lenovo", "ASUS", "Acer", "MSI", "Alienware", "Apple", "Razer", "GIGABYTE"],
 }
 
 MONITOR_FILTERS = {
-    "size": ["21\"", "22\"", "24\"", "27\"", "32\"", "34\"", "38\""],
-    "resolution": ["1080p", "1440p", "2160p (4K)", "3440x1440"],
-    "refresh": ["60Hz", "75Hz", "100Hz", "120Hz", "144Hz", "165Hz", "240Hz"],
-    "panel": ["IPS", "VA", "TN", "OLED", "Nano Cell"],
+    "size": ["17\"", "19\"", "21\"", "22\"", "24\"", "27\"", "30\"", "32\"", "34\"", "38\"", "40\""],
+    "resolution": ["720p", "1080p", "1440p", "2160p (4K)", "3440x1440", "5120x1440"],
+    "refresh": ["60Hz", "75Hz", "100Hz", "120Hz", "144Hz", "165Hz", "240Hz", "360Hz"],
+    "panel": ["IPS", "VA", "TN", "OLED", "Nano Cell", "QLED", "Mini-LED"],
 }
 
 CATEGORIES = {
@@ -234,18 +236,47 @@ async def enter_price(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         return CHOOSE_MONITOR_SIZE
     
     else:
-        # For other categories, skip to photo
+        # For other categories, ask for discount
         if update.callback_query:
             await update.callback_query.edit_message_text(
-                "📸 Надішліть фото товару (або натисніть Пропустити):",
+                "💰 Знижка (%) (або натисніть Пропустити):",
                 reply_markup=skip_kb()
             )
         else:
             await update.message.reply_text(
-                "📸 Надішліть фото товару (або натисніть Пропустити):",
+                "💰 Знижка (%) (або натисніть Пропустити):",
                 reply_markup=skip_kb()
             )
-        return ENTER_PHOTO
+        return ENTER_DISCOUNT
+
+# ─── DISCOUNT ──────────────────────────────────────────────────────────────────
+async def enter_discount(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if update.callback_query:
+        await update.callback_query.answer()
+        context.user_data["discount"] = 0
+    else:
+        try:
+            discount = float(update.message.text)
+            if discount < 0 or discount > 100:
+                await update.message.reply_text("❌ Знижка має бути від 0 до 100%")
+                return ENTER_DISCOUNT
+            context.user_data["discount"] = discount
+        except ValueError:
+            await update.message.reply_text("❌ Будь ласка, введіть число")
+            return ENTER_DISCOUNT
+    
+    # Ask for photo
+    if update.callback_query:
+        await update.callback_query.edit_message_text(
+            "📸 Надішліть фото товару (або натисніть Пропустити):",
+            reply_markup=skip_kb()
+        )
+    else:
+        await update.message.reply_text(
+            "📸 Надішліть фото товару (або натисніть Пропустити):",
+            reply_markup=skip_kb()
+        )
+    return ENTER_PHOTO
 
 # ─── LAPTOP FILTERS ────────────────────────────────────────────────────────────
 async def choose_laptop_display(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -458,6 +489,7 @@ async def publish_to_site(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     payload = {
         "name": data.get("name", "Товар"),
         "price": data.get("price", 0),
+        "discountPercent": data.get("discount", 0),
         "description": data.get("description", ""),
         "imageUrl": data.get("imageUrl", ""),
         "category": category,
@@ -543,6 +575,10 @@ def main():
             ENTER_PRICE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, enter_price),
                 CallbackQueryHandler(enter_price),
+            ],
+            ENTER_DISCOUNT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, enter_discount),
+                CallbackQueryHandler(enter_discount),
             ],
             CHOOSE_LAPTOP_DISPLAY: [CallbackQueryHandler(choose_laptop_display)],
             CHOOSE_LAPTOP_RAM: [CallbackQueryHandler(choose_laptop_ram)],
