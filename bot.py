@@ -16,6 +16,7 @@ from telegram.ext import (
     Application, CommandHandler, MessageHandler, CallbackQueryHandler,
     ConversationHandler, ContextTypes, filters
 )
+from ai_description_generator import generate_description_sync
 
 logging.basicConfig(
     format='%(asctime)s | %(levelname)s | %(message)s',
@@ -667,7 +668,21 @@ async def enter_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 async def enter_description(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.callback_query:
         await update.callback_query.answer()
-        context.user_data["description"] = ""
+        # User skipped - generate AI description
+        await update.callback_query.edit_message_text(
+            "🤖 Генерую опис за допомогою AI...\n⏳ Це займе кілька секунд"
+        )
+        
+        # Generate description using ChatGPT
+        product_data = context.user_data
+        ai_description = generate_description_sync(product_data)
+        
+        if ai_description:
+            context.user_data["description"] = ai_description
+            logger.info(f"✅ AI description generated for {product_data.get('name', 'product')}")
+        else:
+            context.user_data["description"] = ""
+            logger.warning(f"⚠️ AI description generation failed for {product_data.get('name', 'product')}")
     else:
         context.user_data["description"] = update.message.text
     
