@@ -80,14 +80,6 @@ async def upload_photo_to_s3(photo_file_path: str, bot) -> str:
     except Exception as e:
         logger.error(f"❌ Помилка S3 upload: {e}")
         return ""
-            except asyncio.TimeoutError:
-                logger.error(f"❌ Timeout при завантаженні фото на S3")
-                return ""
-    except Exception as e:
-        logger.error(f"❌ Помилка S3 upload: {e}")
-        return ""
-    except Exception as e:
-        logger.error(f"❌ Помилка S3 upload: {e}")
         return ""
 
 # ─── STATES ────────────────────────────────────────────────────────────────────
