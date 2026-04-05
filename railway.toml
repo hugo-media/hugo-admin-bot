@@ -1,5 +1,5 @@
 [build]
-builder = "dockerfile"
+builder = "nix"
 
 [deploy]
 startCommand = "python bot.py"
