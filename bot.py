@@ -37,7 +37,7 @@ async def upload_photo_to_s3(photo_file_path: str, bot) -> str:
     Returns the public URL
     """
     try:
-        # Download file from Telegram
+        # Download file directly from Telegram
         file = await bot.get_file(photo_file_path)
         photo_bytes = await file.download_as_bytearray()
         
@@ -79,7 +79,6 @@ async def upload_photo_to_s3(photo_file_path: str, bot) -> str:
             return ""
     except Exception as e:
         logger.error(f"❌ Помилка S3 upload: {e}")
-        return ""
         return ""
 
 # ─── STATES ────────────────────────────────────────────────────────────────────
