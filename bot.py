@@ -54,7 +54,7 @@ TG_CHANNEL = os.getenv("TG_CHANNEL", "@hugo_media_shop")
     # Publish
     CHOOSE_PUBLISH,
     CONFIRM,
-) = range(21)
+) = range(19)
 
 # ─── FILTER OPTIONS (from website) ────────────────────────────────────────────
 LAPTOP_FILTERS = {
