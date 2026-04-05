@@ -109,7 +109,17 @@ async def upload_photo_to_s3(file, bot) -> str:
     CHOOSE_PUBLISH,
     CONFIRM,
     CHOOSE_LAPTOP_GRAPHICS,
-) = range(21)
+    CHOOSE_LAPTOP_STORAGE,
+    CHOOSE_LAPTOP_WARRANTY,
+    CHOOSE_LAPTOP_CATEGORIES,
+    ENTER_CUSTOM_DISPLAY,
+    ENTER_CUSTOM_RAM,
+    ENTER_CUSTOM_PROCESSOR,
+    ENTER_CUSTOM_GRAPHICS,
+    ENTER_CUSTOM_STORAGE,
+    ENTER_CUSTOM_WARRANTY,
+    ENTER_CUSTOM_CATEGORY,
+) = range(32)
 
 # ─── FILTER OPTIONS (from website) ────────────────────────────────────────────
 LAPTOP_FILTERS = {
@@ -339,9 +349,14 @@ async def choose_laptop_display(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
     
+    if query.data == "laptop_display_custom":
+        await query.edit_message_text("📱 Напишіть діагональ дисплея (наприклад: 14\"):\n\nЛюбий текст, який ви введете:")
+        return ENTER_CUSTOM_DISPLAY
+    
     context.user_data["display"] = query.data.replace("laptop_display_", "")
     
     buttons = [(ram, f"laptop_ram_{ram}") for ram in LAPTOP_FILTERS["ram"]]
+    buttons.append(("✏️ Написати вручну", "laptop_ram_custom"))
     await query.edit_message_text(
         "🧠 Виберіть обсяг RAM:",
         reply_markup=kb(buttons, columns=2)
@@ -352,9 +367,14 @@ async def choose_laptop_ram(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     query = update.callback_query
     await query.answer()
     
+    if query.data == "laptop_ram_custom":
+        await query.edit_message_text("🧠 Напишіть ОЗУ (наприклад: 16 GB):")
+        return ENTER_CUSTOM_RAM
+    
     context.user_data["ram"] = query.data.replace("laptop_ram_", "")
     
     buttons = [(proc, f"laptop_proc_{proc}") for proc in LAPTOP_FILTERS["processor"]]
+    buttons.append(("✏️ Написати вручну", "laptop_proc_custom"))
     await query.edit_message_text(
         "⚙️ Виберіть процесор:",
         reply_markup=kb(buttons, columns=2)
@@ -365,11 +385,15 @@ async def choose_laptop_processor(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
     
+    if query.data == "laptop_proc_custom":
+        await query.edit_message_text("⚙️ Напишіть процесор (наприклад: Intel Core i7):")
+        return ENTER_CUSTOM_PROCESSOR
+    
     context.user_data["processor"] = query.data.replace("laptop_proc_", "")
     
     buttons = [(brand, f"laptop_brand_{brand}") for brand in LAPTOP_FILTERS["brand"]]
     await query.edit_message_text(
-        "🏢 Виберіть бренд:",
+        "🏙️ Виберіть бренд:",
         reply_markup=kb(buttons, columns=2)
     )
     return CHOOSE_LAPTOP_BRAND
@@ -381,6 +405,7 @@ async def choose_laptop_brand(update: Update, context: ContextTypes.DEFAULT_TYPE
     context.user_data["brand"] = query.data.replace("laptop_brand_", "")
     
     buttons = [(gpu, f"laptop_gpu_{gpu}") for gpu in LAPTOP_FILTERS["graphics"]]
+    buttons.append(("✏️ Написати вручну", "laptop_gpu_custom"))
     await query.edit_message_text(
         "🎮 Виберіть відеокарту:",
         reply_markup=kb(buttons, columns=2)
@@ -391,9 +416,151 @@ async def choose_laptop_graphics(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     await query.answer()
     
+    if query.data == "laptop_gpu_custom":
+        await query.edit_message_text("🎮 Напишіть відеокарту (наприклад: NVIDIA RTX 4060):")
+        return ENTER_CUSTOM_GRAPHICS
+    
     context.user_data["graphicsCard"] = query.data.replace("laptop_gpu_", "")
     
+    buttons = [(storage, f"laptop_storage_{storage}") for storage in LAPTOP_FILTERS["storage"]]
+    buttons.append(("✏️ Написати вручну", "laptop_storage_custom"))
     await query.edit_message_text(
+        "💾 Виберіть обсяг пам'яті:",
+        reply_markup=kb(buttons, columns=2)
+    )
+    return CHOOSE_LAPTOP_STORAGE
+
+async def enter_custom_display(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle custom display input"""
+    context.user_data["display"] = update.message.text
+    
+    buttons = [(ram, f"laptop_ram_{ram}") for ram in LAPTOP_FILTERS["ram"]]
+    buttons.append(("✏️ Написати вручну", "laptop_ram_custom"))
+    await update.message.reply_text(
+        "🧠 Виберіть обсяг RAM:",
+        reply_markup=kb(buttons, columns=2)
+    )
+    return CHOOSE_LAPTOP_RAM
+
+async def enter_custom_ram(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle custom RAM input"""
+    context.user_data["ram"] = update.message.text
+    
+    buttons = [(proc, f"laptop_proc_{proc}") for proc in LAPTOP_FILTERS["processor"]]
+    buttons.append(("✏️ Написати вручну", "laptop_proc_custom"))
+    await update.message.reply_text(
+        "⚙️ Виберіть процесор:",
+        reply_markup=kb(buttons, columns=2)
+    )
+    return CHOOSE_LAPTOP_PROCESSOR
+
+async def enter_custom_processor(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle custom processor input"""
+    context.user_data["processor"] = update.message.text
+    
+    buttons = [(brand, f"laptop_brand_{brand}") for brand in LAPTOP_FILTERS["brand"]]
+    await update.message.reply_text(
+        "🏙️ Виберіть бренд:",
+        reply_markup=kb(buttons, columns=2)
+    )
+    return CHOOSE_LAPTOP_BRAND
+
+async def enter_custom_graphics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle custom graphics input"""
+    context.user_data["graphicsCard"] = update.message.text
+    
+    buttons = [(storage, f"laptop_storage_{storage}") for storage in LAPTOP_FILTERS["storage"]]
+    buttons.append(("✏️ Написати вручну", "laptop_storage_custom"))
+    await update.message.reply_text(
+        "💾 Виберіть обсяг пам'яті:",
+        reply_markup=kb(buttons, columns=2)
+    )
+    return CHOOSE_LAPTOP_STORAGE
+
+async def choose_laptop_storage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Choose laptop storage"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "laptop_storage_custom":
+        await query.edit_message_text("💾 Напишіть обсяг пам'яті (наприклад: 512 GB SSD):")
+        return ENTER_CUSTOM_STORAGE
+    
+    context.user_data["storage"] = query.data.replace("laptop_storage_", "")
+    
+    buttons = [(warranty, f"laptop_warranty_{warranty}") for warranty in LAPTOP_FILTERS["warranty"]]
+    buttons.append(("✏️ Написати вручну", "laptop_warranty_custom"))
+    await query.edit_message_text(
+        "🛡️ Виберіть гарантію:",
+        reply_markup=kb(buttons, columns=2)
+    )
+    return CHOOSE_LAPTOP_WARRANTY
+
+async def enter_custom_storage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle custom storage input"""
+    context.user_data["storage"] = update.message.text
+    
+    buttons = [(warranty, f"laptop_warranty_{warranty}") for warranty in LAPTOP_FILTERS["warranty"]]
+    buttons.append(("✏️ Написати вручну", "laptop_warranty_custom"))
+    await update.message.reply_text(
+        "🛡️ Виберіть гарантію:",
+        reply_markup=kb(buttons, columns=2)
+    )
+    return CHOOSE_LAPTOP_WARRANTY
+
+async def choose_laptop_warranty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Choose laptop warranty"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "laptop_warranty_custom":
+        await query.edit_message_text("🛡️ Напишіть гарантію (наприклад: 2 роки):")
+        return ENTER_CUSTOM_WARRANTY
+    
+    context.user_data["warranty"] = query.data.replace("laptop_warranty_", "")
+    
+    buttons = [(cat, f"laptop_category_{cat}") for cat in LAPTOP_FILTERS["categories"]]
+    buttons.append(("✏️ Написати вручну", "laptop_category_custom"))
+    await query.edit_message_text(
+        "📂 Виберіть категорію:",
+        reply_markup=kb(buttons, columns=2)
+    )
+    return CHOOSE_LAPTOP_CATEGORIES
+
+async def enter_custom_warranty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle custom warranty input"""
+    context.user_data["warranty"] = update.message.text
+    
+    buttons = [(cat, f"laptop_category_{cat}") for cat in LAPTOP_FILTERS["categories"]]
+    buttons.append(("✏️ Написати вручну", "laptop_category_custom"))
+    await update.message.reply_text(
+        "📂 Виберіть категорію:",
+        reply_markup=kb(buttons, columns=2)
+    )
+    return CHOOSE_LAPTOP_CATEGORIES
+
+async def choose_laptop_categories(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Choose laptop categories"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "laptop_category_custom":
+        await query.edit_message_text("📂 Напишіть категорію (наприклад: Спеціальні пропозиції):")
+        return ENTER_CUSTOM_CATEGORY
+    
+    context.user_data["categories"] = query.data.replace("laptop_category_", "")
+    
+    await query.edit_message_text(
+        "💰 Знижка (%) (або натисніть Пропустити):",
+        reply_markup=skip_kb()
+    )
+    return ENTER_DISCOUNT
+
+async def enter_custom_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle custom category input"""
+    context.user_data["categories"] = update.message.text
+    
+    await update.message.reply_text(
         "💰 Знижка (%) (або натисніть Пропустити):",
         reply_markup=skip_kb()
     )
@@ -575,6 +742,9 @@ async def publish_to_site(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "processor": data.get("processor", ""),
             "brand": data.get("brand", ""),
             "graphicsCard": data.get("graphicsCard", ""),
+            "storage": data.get("storage", ""),
+            "warranty": data.get("warranty", "3 роки"),
+            "categories": data.get("categories", "Нові ноутбуки"),
         })
     elif category == "monitors":
         payload.update({
@@ -651,10 +821,20 @@ def main():
                 CallbackQueryHandler(enter_discount),
             ],
             CHOOSE_LAPTOP_DISPLAY: [CallbackQueryHandler(choose_laptop_display)],
+            ENTER_CUSTOM_DISPLAY: [MessageHandler(filters.TEXT & ~filters.COMMAND, enter_custom_display)],
             CHOOSE_LAPTOP_RAM: [CallbackQueryHandler(choose_laptop_ram)],
+            ENTER_CUSTOM_RAM: [MessageHandler(filters.TEXT & ~filters.COMMAND, enter_custom_ram)],
             CHOOSE_LAPTOP_PROCESSOR: [CallbackQueryHandler(choose_laptop_processor)],
+            ENTER_CUSTOM_PROCESSOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, enter_custom_processor)],
             CHOOSE_LAPTOP_BRAND: [CallbackQueryHandler(choose_laptop_brand)],
             CHOOSE_LAPTOP_GRAPHICS: [CallbackQueryHandler(choose_laptop_graphics)],
+            ENTER_CUSTOM_GRAPHICS: [MessageHandler(filters.TEXT & ~filters.COMMAND, enter_custom_graphics)],
+            CHOOSE_LAPTOP_STORAGE: [CallbackQueryHandler(choose_laptop_storage)],
+            ENTER_CUSTOM_STORAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, enter_custom_storage)],
+            CHOOSE_LAPTOP_WARRANTY: [CallbackQueryHandler(choose_laptop_warranty)],
+            ENTER_CUSTOM_WARRANTY: [MessageHandler(filters.TEXT & ~filters.COMMAND, enter_custom_warranty)],
+            CHOOSE_LAPTOP_CATEGORIES: [CallbackQueryHandler(choose_laptop_categories)],
+            ENTER_CUSTOM_CATEGORY: [MessageHandler(filters.TEXT & ~filters.COMMAND, enter_custom_category)],
             CHOOSE_MONITOR_SIZE: [CallbackQueryHandler(choose_monitor_size)],
             CHOOSE_MONITOR_RESOLUTION: [CallbackQueryHandler(choose_monitor_resolution)],
             CHOOSE_MONITOR_REFRESH: [CallbackQueryHandler(choose_monitor_refresh)],
