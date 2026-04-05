@@ -120,7 +120,7 @@ async def upload_photo_to_s3(file, bot) -> str:
     ENTER_CUSTOM_STORAGE,
     ENTER_CUSTOM_WARRANTY,
     ENTER_CUSTOM_CATEGORY,
-) = range(32)
+) = range(31)
 
 # ─── FILTER OPTIONS (from website) ────────────────────────────────────────────
 LAPTOP_FILTERS = {
