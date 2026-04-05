@@ -108,7 +108,8 @@ async def upload_photo_to_s3(file, bot) -> str:
     # Publish
     CHOOSE_PUBLISH,
     CONFIRM,
-) = range(20)
+    CHOOSE_LAPTOP_GRAPHICS,
+) = range(21)
 
 # ─── FILTER OPTIONS (from website) ────────────────────────────────────────────
 LAPTOP_FILTERS = {
@@ -324,11 +325,24 @@ async def choose_laptop_brand(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     context.user_data["brand"] = query.data.replace("laptop_brand_", "")
     
+    buttons = [(gpu, f"laptop_gpu_{gpu}") for gpu in LAPTOP_FILTERS["graphics"]]
     await query.edit_message_text(
-        "📸 Надішліть фото товару (або натисніть Пропустити):",
+        "🎮 Виберіть відеокарту:",
+        reply_markup=kb(buttons, columns=2)
+    )
+    return CHOOSE_LAPTOP_GRAPHICS
+
+async def choose_laptop_graphics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+    
+    context.user_data["graphicsCard"] = query.data.replace("laptop_gpu_", "")
+    
+    await query.edit_message_text(
+        "💰 Знижка (%) (або натисніть Пропустити):",
         reply_markup=skip_kb()
     )
-    return ENTER_PHOTO
+    return ENTER_DISCOUNT
 
 # ─── MONITOR FILTERS ──────────────────────────────────────────────────────────
 async def choose_monitor_size(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -505,6 +519,7 @@ async def publish_to_site(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "ram": data.get("ram", ""),
             "processor": data.get("processor", ""),
             "brand": data.get("brand", ""),
+            "graphicsCard": data.get("graphicsCard", ""),
         })
     elif category == "monitors":
         payload.update({
@@ -584,6 +599,7 @@ def main():
             CHOOSE_LAPTOP_RAM: [CallbackQueryHandler(choose_laptop_ram)],
             CHOOSE_LAPTOP_PROCESSOR: [CallbackQueryHandler(choose_laptop_processor)],
             CHOOSE_LAPTOP_BRAND: [CallbackQueryHandler(choose_laptop_brand)],
+            CHOOSE_LAPTOP_GRAPHICS: [CallbackQueryHandler(choose_laptop_graphics)],
             CHOOSE_MONITOR_SIZE: [CallbackQueryHandler(choose_monitor_size)],
             CHOOSE_MONITOR_RESOLUTION: [CallbackQueryHandler(choose_monitor_resolution)],
             CHOOSE_MONITOR_REFRESH: [CallbackQueryHandler(choose_monitor_refresh)],
