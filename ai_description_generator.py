@@ -10,19 +10,28 @@ from typing import Optional
 
 try:
     from openai import OpenAI
+    OPENAI_AVAILABLE = True
 except ImportError:
-    OpenAI = None
+    OPENAI_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
 # Initialize OpenAI client
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+client = None
 
-if OPENAI_API_KEY:
-    client = OpenAI(api_key=OPENAI_API_KEY)
+if OPENAI_AVAILABLE and OPENAI_API_KEY:
+    try:
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        logger.info("✅ OpenAI client initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize OpenAI client: {e}")
+        client = None
 else:
-    client = None
-    logger.warning("⚠️ OPENAI_API_KEY not set - AI description generation will be disabled")
+    if not OPENAI_AVAILABLE:
+        logger.warning("⚠️ OpenAI package not installed")
+    if not OPENAI_API_KEY:
+        logger.warning("⚠️ OPENAI_API_KEY not set - AI description generation will be disabled")
 
 # System prompt that teaches ChatGPT Hugo Media's style
 SYSTEM_PROMPT = """You are a professional product description writer for Hugo Media, a tech retailer in Poland.
