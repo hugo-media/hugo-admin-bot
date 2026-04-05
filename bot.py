@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 BOT_TOKEN = os.getenv("ADMIN_BOT_TOKEN", "")
-OWNER_ID = int(os.getenv("OWNER_CHAT_ID", "0"))
+OWNER_ID = int(os.getenv("OWNER_ID", "0"))
 SITE_URL = os.getenv("SITE_URL", "https://laptopcat-dmlwym6z.manus.space")
 BOT_API_SECRET = os.getenv("BOT_API_SECRET", "hugo_bot_secret_2024")
 TG_CHANNEL = os.getenv("TG_CHANNEL", "@hugo_media_shop")
