@@ -9,7 +9,6 @@ import json
 import logging
 import requests
 import asyncio
-import aiohttp
 import io
 import uuid
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -45,29 +44,42 @@ async def upload_photo_to_s3(photo_file_path: str, bot) -> str:
         # Generate unique filename
         filename = f"product_{uuid.uuid4().hex[:8]}.jpg"
         
-        # Upload to S3 via website API using aiohttp
-        async with aiohttp.ClientSession() as session:
-            form = aiohttp.FormData()
-            form.add_field('file', io.BytesIO(photo_bytes), filename=filename, content_type='image/jpeg')
-            
-            headers = {'X-Bot-Secret': BOT_API_SECRET}
-            
+        # Upload to S3 via website API using requests in executor
+        loop = asyncio.get_event_loop()
+        
+        def upload_sync():
             try:
-                async with session.post(
+                files = {'file': (filename, io.BytesIO(photo_bytes), 'image/jpeg')}
+                headers = {'X-Bot-Secret': BOT_API_SECRET}
+                
+                response = requests.post(
                     f"{SITE_URL}/api/bot/upload",
-                    data=form,
+                    files=files,
                     headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=30)
-                ) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        image_url = data.get('url', '')
-                        logger.info(f"✅ Фото завантажено на S3: {image_url}")
-                        return image_url
-                    else:
-                        text = await response.text()
-                        logger.error(f"❌ Помилка завантаження (статус {response.status}): {text}")
-                        return ""
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    return data.get('url', '')
+                else:
+                    logger.error(f"❌ Upload error (status {response.status_code}): {response.text}")
+                    return ""
+            except Exception as e:
+                logger.error(f"❌ Upload exception: {e}")
+                return ""
+        
+        try:
+            image_url = await loop.run_in_executor(None, upload_sync)
+            if image_url:
+                logger.info(f"✅ Фото завантажено на S3: {image_url}")
+            return image_url
+        except Exception as e:
+            logger.error(f"❌ Executor error: {e}")
+            return ""
+    except Exception as e:
+        logger.error(f"❌ Помилка S3 upload: {e}")
+        return ""
             except asyncio.TimeoutError:
                 logger.error(f"❌ Timeout при завантаженні фото на S3")
                 return ""
