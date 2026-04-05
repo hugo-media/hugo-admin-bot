@@ -118,6 +118,9 @@ LAPTOP_FILTERS = {
     "processor": ["Intel Core i3", "Intel Core i5", "Intel Core i7", "Intel Core i9", "Intel Core Ultra 5", "Intel Core Ultra 7", "Intel Core Ultra 9", "AMD Ryzen 3", "AMD Ryzen 5", "AMD Ryzen 7", "AMD Ryzen 9"],
     "graphics": ["Intel UHD", "Intel Iris Xe", "NVIDIA GTX 1650", "NVIDIA RTX 4050", "NVIDIA RTX 4060", "NVIDIA RTX 4070", "NVIDIA RTX 4090", "AMD Radeon"],
     "brand": ["Dell", "HP", "Lenovo", "ASUS", "Acer", "MSI", "Alienware", "Apple", "Razer", "GIGABYTE"],
+    "warranty": ["1 рік", "2 роки", "3 роки", "5 років", "Без гарантії"],
+    "categories": ["Нові ноутбуки", "Ноутбуки після оренди", "Пропозиція для компаній", "Акції"],
+    "storage": ["256 GB SSD", "512 GB SSD", "1 TB SSD", "2 TB SSD", "256 GB HDD", "512 GB HDD", "1 TB HDD"],
 }
 
 MONITOR_FILTERS = {
@@ -251,6 +254,58 @@ async def enter_price(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         return ENTER_DISCOUNT
 
 # ─── DISCOUNT ──────────────────────────────────────────────────────────────────
+async def choose_laptop_storage(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Choose laptop storage"""
+    user_data = context.user_data
+    storage_options = LAPTOP_FILTERS["storage"]
+    
+    keyboard = [[InlineKeyboardButton(opt, callback_data=f"storage_{opt}")] for opt in storage_options]
+    keyboard.append([InlineKeyboardButton("Пропустити", callback_data="storage_skip")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.edit_message_text(
+        "💾 Оберіть обсяг пам'яті:",
+        reply_markup=reply_markup
+    )
+    return CHOOSE_LAPTOP_WARRANTY
+
+async def choose_laptop_warranty(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Choose laptop warranty"""
+    user_data = context.user_data
+    
+    # Store storage from callback
+    query = update.callback_query
+    if query.data != "storage_skip":
+        user_data["storage"] = query.data.replace("storage_", "")
+    
+    warranty_options = LAPTOP_FILTERS["warranty"]
+    keyboard = [[InlineKeyboardButton(opt, callback_data=f"warranty_{opt}")] for opt in warranty_options]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(
+        "🛡️ Оберіть гарантію:",
+        reply_markup=reply_markup
+    )
+    return CHOOSE_LAPTOP_CATEGORIES
+
+async def choose_laptop_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Choose laptop categories"""
+    user_data = context.user_data
+    
+    # Store warranty from callback
+    query = update.callback_query
+    user_data["warranty"] = query.data.replace("warranty_", "")
+    
+    categories_options = LAPTOP_FILTERS["categories"]
+    keyboard = [[InlineKeyboardButton(opt, callback_data=f"category_{opt}")] for opt in categories_options]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(
+        "📂 Оберіть категорію:",
+        reply_markup=reply_markup
+    )
+    return ENTER_DISCOUNT
+
 async def enter_discount(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.callback_query:
         await update.callback_query.answer()
