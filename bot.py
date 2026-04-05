@@ -31,14 +31,13 @@ BOT_API_SECRET = os.getenv("BOT_API_SECRET", "hugo_bot_secret_2024")
 TG_CHANNEL = os.getenv("TG_CHANNEL", "@hugo_media_shop")
 
 # ─── S3 UPLOAD HELPER ──────────────────────────────────────────────────────────
-async def upload_photo_to_s3(photo_file_path: str, bot) -> str:
+async def upload_photo_to_s3(file, bot) -> str:
     """
     Download photo from Telegram and upload to S3 via website API
     Returns the public URL
     """
     try:
         # Download file directly from Telegram
-        file = await bot.get_file(photo_file_path)
         photo_bytes = await file.download_as_bytearray()
         
         # Generate unique filename
@@ -364,7 +363,7 @@ async def enter_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         try:
             file = await update.message.photo[-1].get_file()
             # Upload photo to S3
-            image_url = await upload_photo_to_s3(file.file_path, context.bot)
+            image_url = await upload_photo_to_s3(file, context.bot)
             
             if image_url:
                 context.user_data["imageUrl"] = image_url
