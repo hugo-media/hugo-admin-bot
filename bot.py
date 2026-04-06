@@ -1009,9 +1009,16 @@ def main():
     app.add_handler(CommandHandler("quick_device", quick_add_device))
     
     # Add message handler for quick product data (must be after conv_handler)
+    def quick_product_filter(update, context):
+        return (update.effective_user is not None and 
+                update.effective_user.id == OWNER_ID and 
+                update.message is not None and 
+                update.message.text is not None and 
+                update.message.text.count("|") >= 3)
+    
+    quick_filter = filters.create(quick_product_filter)
     app.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND & 
-        (lambda u: u.effective_user.id == OWNER_ID and u.message.text.count("|") >= 3),
+        filters.TEXT & ~filters.COMMAND & quick_filter,
         handle_quick_product
     ))
     
