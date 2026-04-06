@@ -806,6 +806,139 @@ async def publish_to_telegram(update: Update, context: ContextTypes.DEFAULT_TYPE
     except Exception as e:
         logger.error(f"❌ Помилка TG: {e}")
 
+# ─── QUICK PRODUCT COMMANDS ───────────────────────────────────────────────────────
+async def quick_add_laptop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Quick add laptop command"""
+    await update.message.reply_text(
+        "⚡ Швидке додавання ноутбука\n\n"
+        "Формат: назва | ціна | опис | URL фото | процесор, ОЗУ, накопичувач\n\n"
+        "Приклад:\n"
+        "Dell Precision 7680 | 18000 | Професійний ноутбук | https://example.com/photo.jpg | Intel i9, 32GB, 1TB SSD"
+    )
+    context.user_data["quick_add_mode"] = "laptop"
+    context.user_data["awaiting_quick_product"] = True
+
+async def quick_add_monitor(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Quick add monitor command"""
+    await update.message.reply_text(
+        "⚡ Швидке додавання монітора\n\n"
+        "Формат: назва | ціна | опис | URL фото | роздільна здатність, розмір, частота\n\n"
+        "Приклад:\n"
+        "Dell U2720Q | 5000 | 4K монітор | https://example.com/photo.jpg | 3840x2160, 27\", 60Hz"
+    )
+    context.user_data["quick_add_mode"] = "monitor"
+    context.user_data["awaiting_quick_product"] = True
+
+async def quick_add_tablet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Quick add tablet command"""
+    await update.message.reply_text(
+        "⚡ Швидке додавання планшета\n\n"
+        "Формат: назва | ціна | опис | URL фото | процесор, ОЗУ, накопичувач\n\n"
+        "Приклад:\n"
+        "iPad Pro 12.9 | 8000 | Професійний планшет | https://example.com/photo.jpg | M2, 8GB, 256GB"
+    )
+    context.user_data["quick_add_mode"] = "tablet"
+    context.user_data["awaiting_quick_product"] = True
+
+async def quick_add_device(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Quick add smart device command"""
+    await update.message.reply_text(
+        "⚡ Швидке додавання смарт девайса\n\n"
+        "Формат: назва | ціна | опис | URL фото | тип, бренд, особливості\n\n"
+        "Приклад:\n"
+        "Apple Watch Series 9 | 3000 | Смарт годинник | https://example.com/photo.jpg | Годинник, Apple, GPS+Cellular"
+    )
+    context.user_data["quick_add_mode"] = "device"
+    context.user_data["awaiting_quick_product"] = True
+
+async def handle_quick_product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle quick product data"""
+    if not context.user_data.get("awaiting_quick_product"):
+        return
+    
+    try:
+        parts = [p.strip() for p in update.message.text.split("|")] 
+        if len(parts) < 4:
+            await update.message.reply_text("❌ Невірний формат. Спробуйте ще раз.")
+            return
+        
+        name = parts[0]
+        price = float(parts[1])
+        description = parts[2]
+        image_url = parts[3]
+        specs = parts[4] if len(parts) > 4 else ""
+        
+        mode = context.user_data.get("quick_add_mode", "laptop")
+        category_map = {
+            "laptop": "laptops",
+            "monitor": "monitors",
+            "tablet": "tablets",
+            "device": "smartDevices"
+        }
+        category = category_map.get(mode, "laptops")
+        
+        payload = {
+            "name": name,
+            "price": price,
+            "description": description,
+            "imageUrl": image_url,
+            "category": category,
+            "categories": json.dumps(["new"]),
+            "condition": "Новий",
+            "warranty": "3 роки",
+        }
+        
+        # Parse specs based on mode
+        if specs:
+            spec_parts = [s.strip() for s in specs.split(",")]
+            if mode == "laptop" and len(spec_parts) >= 3:
+                payload["processor"] = spec_parts[0]
+                payload["ram"] = spec_parts[1]
+                payload["storage"] = spec_parts[2]
+            elif mode == "monitor" and len(spec_parts) >= 3:
+                payload["resolution"] = spec_parts[0]
+                payload["size"] = spec_parts[1]
+                payload["refreshRate"] = spec_parts[2]
+            elif mode == "tablet" and len(spec_parts) >= 3:
+                payload["processor"] = spec_parts[0]
+                payload["ram"] = spec_parts[1]
+                payload["storage"] = spec_parts[2]
+            elif mode == "device" and len(spec_parts) >= 3:
+                payload["type"] = spec_parts[0]
+                payload["brand"] = spec_parts[1]
+                payload["features"] = spec_parts[2]
+        
+        # Send to API
+        await update.message.chat.send_action("typing")
+        
+        response = requests.post(
+            f"{SITE_URL}/api/bot/product",
+            json=payload,
+            headers={"X-Bot-Secret": BOT_API_SECRET},
+            timeout=10
+        )
+        
+        if response.status_code == 201:
+            await update.message.reply_text(
+                f"✅ Товар успішно додано!\n\n"
+                f"📦 {name}\n"
+                f"💰 {price} zł\n"
+                f"📂 {category}"
+            )
+        else:
+            error_data = response.json()
+            await update.message.reply_text(
+                f"❌ Помилка: {error_data.get('error', 'Unknown error')}"
+            )
+        
+        context.user_data["awaiting_quick_product"] = False
+    
+    except ValueError as e:
+        await update.message.reply_text(f"❌ Помилка: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        await update.message.reply_text(f"❌ Помилка сервера: {str(e)}")
+
 # ─── CANCEL ────────────────────────────────────────────────────────────────────
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("❌ Скасовано")
@@ -868,6 +1001,19 @@ def main():
     )
     
     app.add_handler(conv_handler)
+    
+    # Add quick product commands
+    app.add_handler(CommandHandler("quick_laptop", quick_add_laptop))
+    app.add_handler(CommandHandler("quick_monitor", quick_add_monitor))
+    app.add_handler(CommandHandler("quick_tablet", quick_add_tablet))
+    app.add_handler(CommandHandler("quick_device", quick_add_device))
+    
+    # Add message handler for quick product data (must be after conv_handler)
+    app.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND & 
+        (lambda u: u.effective_user.id == OWNER_ID and u.message.text.count("|") >= 3),
+        handle_quick_product
+    ))
     
     logger.info("🤖 Бот запущено")
     app.run_polling()
