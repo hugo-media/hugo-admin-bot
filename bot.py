@@ -35,13 +35,18 @@ TG_CHANNEL = os.getenv("TG_CHANNEL", "@hugo_media_shop")
 async def get_telegram_photo_url(file, bot) -> str:
     """
     Get direct Telegram CDN URL for the photo.
-    Returns the public Telegram file URL.
+    In python-telegram-bot 22.x, file.file_path already returns the full URL.
     """
     try:
-        file_path = file.file_path  # e.g. photos/file_123.jpg
-        bot_token = bot.token
-        image_url = f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
-        logger.info(f"✅ Telegram фото URL отримано")
+        file_path = file.file_path
+        # In v22.x file_path is already a full URL
+        if file_path and file_path.startswith('http'):
+            image_url = file_path
+        else:
+            # Fallback for relative paths
+            bot_token = bot.token
+            image_url = f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
+        logger.info(f"✅ Telegram фото URL отримано: {image_url[:80]}")
         return image_url
     except Exception as e:
         logger.error(f"❌ Помилка отримання Telegram URL: {e}")
