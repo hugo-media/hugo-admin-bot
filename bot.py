@@ -655,7 +655,15 @@ async def enter_description(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             context.user_data["description"] = ""
             logger.warning(f"⚠️ AI description generation failed for {product_data.get('name', 'product')}")
     else:
-        context.user_data["description"] = update.message.text
+        desc_text = update.message.text
+        # Check if description is too long for TG caption (reserve space for other fields ~300 chars)
+        if len(desc_text) > 700:
+            await update.message.reply_text(
+                f"⚠️ Опис задовгий ({len(desc_text)} символів). Максимально 700 символів.\n\nБудь ласка, скороти опис і надішли ще раз:",
+                reply_markup=skip_kb()
+            )
+            return ENTER_DESCRIPTION
+        context.user_data["description"] = desc_text
     
     # Show summary and publish options
     await show_summary(update, context)
@@ -826,24 +834,16 @@ async def publish_to_telegram(update: Update, context: ContextTypes.DEFAULT_TYPE
         if image_url:
             # Telegram CDN URLs require downloading first, then re-uploading as bytes
             # because Telegram API cannot fetch its own private CDN URLs
-            try:
-                img_response = requests.get(image_url, timeout=15)
-                img_response.raise_for_status()
-                photo_bytes = io.BytesIO(img_response.content)
-                photo_bytes.name = "photo.jpg"
-                await context.bot.send_photo(
-                    chat_id=TG_CHANNEL,
-                    photo=photo_bytes,
-                    caption=caption,
-                    parse_mode="Markdown"
-                )
-            except Exception as img_err:
-                logger.warning(f"⚠️ Не вдалось завантажити фото, відправляю текст: {img_err}")
-                await context.bot.send_message(
-                    chat_id=TG_CHANNEL,
-                    text=caption,
-                    parse_mode="Markdown"
-                )
+            img_response = requests.get(image_url, timeout=15)
+            img_response.raise_for_status()
+            photo_bytes = io.BytesIO(img_response.content)
+            photo_bytes.name = "photo.jpg"
+            await context.bot.send_photo(
+                chat_id=TG_CHANNEL,
+                photo=photo_bytes,
+                caption=caption,
+                parse_mode="Markdown"
+            )
         else:
             await context.bot.send_message(
                 chat_id=TG_CHANNEL,
