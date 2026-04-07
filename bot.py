@@ -805,12 +805,26 @@ async def publish_to_telegram(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     try:
         if image_url:
-            await context.bot.send_photo(
-                chat_id=TG_CHANNEL,
-                photo=image_url,
-                caption=caption,
-                parse_mode="Markdown"
-            )
+            # Telegram CDN URLs require downloading first, then re-uploading as bytes
+            # because Telegram API cannot fetch its own private CDN URLs
+            try:
+                img_response = requests.get(image_url, timeout=15)
+                img_response.raise_for_status()
+                photo_bytes = io.BytesIO(img_response.content)
+                photo_bytes.name = "photo.jpg"
+                await context.bot.send_photo(
+                    chat_id=TG_CHANNEL,
+                    photo=photo_bytes,
+                    caption=caption,
+                    parse_mode="Markdown"
+                )
+            except Exception as img_err:
+                logger.warning(f"⚠️ Не вдалось завантажити фото, відправляю текст: {img_err}")
+                await context.bot.send_message(
+                    chat_id=TG_CHANNEL,
+                    text=caption,
+                    parse_mode="Markdown"
+                )
         else:
             await context.bot.send_message(
                 chat_id=TG_CHANNEL,
