@@ -685,7 +685,7 @@ async def show_summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     else:
         await update.message.reply_text(summary, reply_markup=kb(buttons, columns=2))
 
-# ─── PUBLISH ──────────────────────────────────────────────────────────────────
+# ─── PUBLISH ──────────────────────────────────────────────────────────────────────────────
 async def choose_publish(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
@@ -698,10 +698,28 @@ async def choose_publish(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     if action == "publish_site":
         await publish_to_site(update, context)
+        await query.edit_message_text("✅ Опубліковано на сайт! Натисніть /start для нового товару")
+        return ConversationHandler.END
+    
     elif action == "publish_tg":
         await publish_to_telegram(update, context)
+        # After TG publish — offer to also publish to site
+        buttons = [
+            ("🌐 Також на сайт", "publish_site"),
+            ("❌ Готово", "cancel"),
+        ]
+        await query.edit_message_text(
+            "✅ Опубліковано в TG канал!\n\nДодати цей товар також на сайт?",
+            reply_markup=kb(buttons, columns=2)
+        )
+        return CHOOSE_PUBLISH
     
-    await query.edit_message_text("✅ Готово! Натисніть /start для нового товару")
+    elif action == "publish_both":
+        await publish_to_site(update, context)
+        await publish_to_telegram(update, context)
+        await query.edit_message_text("✅ Опубліковано і на сайт, і в TG канал! Натисніть /start для нового товару")
+        return ConversationHandler.END
+    
     return ConversationHandler.END
 
 async def publish_to_site(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -790,15 +808,16 @@ async def publish_to_telegram(update: Update, context: ContextTypes.DEFAULT_TYPE
         price_text = f"*{price} zł*"
 
     description = data.get('description', '')
-    desc_block = f"\n📝 {description}" if description else ""
-    specs_block = f"\n\n{specs_text}" if specs_text else ""
+    desc_block = f"{description}\n\n" if description else ""
+    specs_block = f"{specs_text}\n\n" if specs_text else ""
 
+    # Post structure: name → description → specs → price → contacts
     caption = (
         f"🛍 *{data.get('name', 'Новий товар')}*\n\n"
-        f"💵 Ціна: {price_text}"
         f"{desc_block}"
-        f"{specs_block}\n\n"
-        f"🔗 [Переглянути на сайті]({SITE_URL})"
+        f"{specs_block}"
+        f"💵 Ціна: {price_text}\n\n"
+        f"💬 Менеджер: @HUGO\_Medi"
     )
 
     image_url = data.get('imageUrl', '')
