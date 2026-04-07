@@ -31,54 +31,20 @@ SITE_URL = os.getenv("SITE_URL", "https://web-production-036f7.up.railway.app")
 BOT_API_SECRET = os.getenv("BOT_API_SECRET", "hugo_bot_secret_2024")
 TG_CHANNEL = os.getenv("TG_CHANNEL", "@hugo_media_shop")
 
-# ─── S3 UPLOAD HELPER ──────────────────────────────────────────────────────────
-async def upload_photo_to_s3(file, bot) -> str:
+# ─── TELEGRAM PHOTO URL HELPER ────────────────────────────────────────────────
+async def get_telegram_photo_url(file, bot) -> str:
     """
-    Download photo from Telegram and upload to S3 via website API
-    Returns the public URL
+    Get direct Telegram CDN URL for the photo.
+    Returns the public Telegram file URL.
     """
     try:
-        # Download file directly from Telegram
-        photo_bytes = await file.download_as_bytearray()
-        
-        # Generate unique filename
-        filename = f"product_{uuid.uuid4().hex[:8]}.jpg"
-        
-        # Upload to S3 via website API using requests in executor
-        loop = asyncio.get_event_loop()
-        
-        def upload_sync():
-            try:
-                files = {'file': (filename, io.BytesIO(photo_bytes), 'image/jpeg')}
-                headers = {'X-Bot-Secret': BOT_API_SECRET}
-                
-                response = requests.post(
-                    f"{SITE_URL}/api/bot/upload",
-                    files=files,
-                    headers=headers,
-                    timeout=30
-                )
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    return data.get('url', '')
-                else:
-                    logger.error(f"❌ Upload error (status {response.status_code}): {response.text}")
-                    return ""
-            except Exception as e:
-                logger.error(f"❌ Upload exception: {e}")
-                return ""
-        
-        try:
-            image_url = await loop.run_in_executor(None, upload_sync)
-            if image_url:
-                logger.info(f"✅ Фото завантажено на S3: {image_url}")
-            return image_url
-        except Exception as e:
-            logger.error(f"❌ Executor error: {e}")
-            return ""
+        file_path = file.file_path  # e.g. photos/file_123.jpg
+        bot_token = bot.token
+        image_url = f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
+        logger.info(f"✅ Telegram фото URL отримано")
+        return image_url
     except Exception as e:
-        logger.error(f"❌ Помилка S3 upload: {e}")
+        logger.error(f"❌ Помилка отримання Telegram URL: {e}")
         return ""
 
 # ─── STATES ────────────────────────────────────────────────────────────────────
@@ -626,25 +592,25 @@ async def enter_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         context.user_data["imageUrl"] = ""
     elif update.message.photo:
         # Show loading message
-        loading_msg = await update.message.reply_text("⏳ Завантажую фото на S3...")
+        loading_msg = await update.message.reply_text("⏳ Обробляю фото...")
         
         try:
             file = await update.message.photo[-1].get_file()
-            # Upload photo to S3
-            image_url = await upload_photo_to_s3(file, context.bot)
+            # Get Telegram photo URL
+            image_url = await get_telegram_photo_url(file, context.bot)
             
             if image_url:
                 context.user_data["imageUrl"] = image_url
                 await loading_msg.delete()
                 await update.message.reply_text(
-                    "✅ Фото завантажено!\n📝 Опис товару (або натисніть Пропустити):",
+                    "✅ Фото збережено!\n📝 Опис товару (або натисніть Пропустити):",
                     reply_markup=skip_kb()
                 )
             else:
                 context.user_data["imageUrl"] = ""
                 await loading_msg.delete()
                 await update.message.reply_text(
-                    "❌ Помилка завантаження фото. Спробуйте ще раз.\n📝 Опис товару (або натисніть Пропустити):",
+                    "❌ Помилка обробки фото. Спробуйте ще раз.\n📝 Опис товару (або натисніть Пропустити):",
                     reply_markup=skip_kb()
                 )
         except Exception as e:
