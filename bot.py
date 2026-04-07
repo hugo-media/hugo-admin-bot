@@ -1038,7 +1038,7 @@ def main():
     ))
     
     logger.info("🤖 Бот запущено")
-    app.run_polling()
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
