@@ -757,25 +757,69 @@ async def publish_to_site(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def publish_to_telegram(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     data = context.user_data
-    
-    message = f"""
-🛍 **{data.get('name', 'Новий товар')}**
+    category = data.get('category', '')
 
-💵 Ціна: {data.get('price', 0)} zł
-📝 {data.get('description', 'Чудовий товар!')}
+    # Build specs block based on category
+    specs_lines = []
+    if category == 'laptops':
+        if data.get('brand'):        specs_lines.append(f"🏷 Бренд: {data['brand']}")
+        if data.get('processor'):    specs_lines.append(f"⚙️ Процесор: {data['processor']}")
+        if data.get('ram'):          specs_lines.append(f"🧠 ОЗУ: {data['ram']}")
+        if data.get('storage'):      specs_lines.append(f"💾 Накопичувач: {data['storage']}")
+        if data.get('display'):      specs_lines.append(f"🖥 Дисплей: {data['display']}")
+        if data.get('graphicsCard'): specs_lines.append(f"🎮 Відеокарта: {data['graphicsCard']}")
+        if data.get('warranty'):     specs_lines.append(f"🛡 Гарантія: {data['warranty']}")
+    elif category == 'monitors':
+        if data.get('size'):         specs_lines.append(f"📐 Розмір: {data['size']}")
+        if data.get('resolution'):   specs_lines.append(f"🔍 Роздільна здатність: {data['resolution']}")
+        if data.get('refreshRate'):  specs_lines.append(f"⚡️ Частота: {data['refreshRate']}")
+        if data.get('panelType'):    specs_lines.append(f"🎨 Тип панелі: {data['panelType']}")
+    elif category == 'tablets':
+        if data.get('ram'):          specs_lines.append(f"🧠 ОЗУ: {data['ram']}")
+        if data.get('storage'):      specs_lines.append(f"💾 Пам'ять: {data['storage']}")
 
-🔗 [Переглянути на сайті]({SITE_URL})
-"""
-    
+    specs_text = "\n".join(specs_lines)
+
+    # Price with optional discount
+    price = data.get('price', 0)
+    discount = data.get('discount', 0)
+    if discount:
+        old_price = round(float(price) / (1 - float(discount) / 100))
+        price_text = f"~{old_price} zł~ → *{price} zł* (-{discount}%)"
+    else:
+        price_text = f"*{price} zł*"
+
+    description = data.get('description', '')
+    desc_block = f"\n📝 {description}" if description else ""
+    specs_block = f"\n\n{specs_text}" if specs_text else ""
+
+    caption = (
+        f"🛍 *{data.get('name', 'Новий товар')}*\n\n"
+        f"💵 Ціна: {price_text}"
+        f"{desc_block}"
+        f"{specs_block}\n\n"
+        f"🔗 [Переглянути на сайті]({SITE_URL})"
+    )
+
+    image_url = data.get('imageUrl', '')
+
     try:
-        await context.bot.send_message(
-            chat_id=TG_CHANNEL,
-            text=message,
-            parse_mode="Markdown"
-        )
-        logger.info(f"✅ Опубліковано в TG: {TG_CHANNEL}")
+        if image_url:
+            await context.bot.send_photo(
+                chat_id=TG_CHANNEL,
+                photo=image_url,
+                caption=caption,
+                parse_mode="Markdown"
+            )
+        else:
+            await context.bot.send_message(
+                chat_id=TG_CHANNEL,
+                text=caption,
+                parse_mode="Markdown"
+            )
+        logger.info(f"✅ Опубліковано в TG канал: {TG_CHANNEL}")
     except Exception as e:
-        logger.error(f"❌ Помилка TG: {e}")
+        logger.error(f"❌ Помилка публікації в TG: {e}")
 
 # ─── QUICK PRODUCT COMMANDS ───────────────────────────────────────────────────────
 async def quick_add_laptop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
